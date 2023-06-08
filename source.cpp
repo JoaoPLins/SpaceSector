@@ -10,11 +10,59 @@
 
 using namespace std;
 
+//ok setting the objectives here 
+/* 
+objective n1 -> have a code all in one file, yes it is going to be messy, but well it is a interesting concept in trying to keep all to one file, the next one I'll make it all in the oposite way, as if forcing my self only to work with header files; 
+objective n2 -> have time lag inplemented, ( it is almost done... the time lag calculation is there, I just need to define that the player can be in both the ship and the home_planet)
+objective n2 -> have the commands that the player can use; (this is not yet inplemented, but it will run like a linux computer I guess, helping command will be important to it) 
+objective n3 -> keep it organized ( yes.) 
+*/
+
+// curent status of development 
+/*
+DONE:
+classes: 
+-mapTile  
+-Planet
+
+Functuions:
+-Rng  
+create ship
+gametime
+
+HALF-DONE: 
+Classes:
+-Ship
+-Event
+-Wormhole
+
+Functions: 
+
+-runEvent
+
+
+
+shipselected 
+
+TODO
+
+functions:
+PlayerCommands.
+
+*/
 atomic<bool> statusofgame;
 atomic<int> speed = 1;
 int ticknumber = 0;
 int minutetick = 0;
 int hourtick = 0;
+
+int Rng()
+{
+	std::random_device rd;
+	std::mt19937 rng(rd());
+	std::uniform_int_distribution<int> dist(1, 100);
+	return dist(rng);
+};
 
 class MapTile
 {
@@ -92,6 +140,8 @@ class WormHole : public MapTile
 {
 public:
 
+	static int wormholeIndex;
+
 	WormHole(int Placex,int Placey,string name) : MapTile(Placex, Placey)
 	{
 		cout << "debugmode:" << endl;
@@ -115,6 +165,9 @@ public:
 		cout << temppairc.first << temppairc.second << endl;
 		wormholed = temppairc;
 		cout << wormholed.first << wormholed.second << endl;
+		Iworm = wormholeIndex;
+		wormholeIndex++;
+		
 	};
 
 	void seeWormhole()
@@ -156,6 +209,7 @@ public:
 		}
 	};
 
+
 	/*void Wormholeevent()
 	{
 		
@@ -174,13 +228,135 @@ public:
 			seeWormhole();
 		}
 	}
+	void set_pointer();
+	
 private:
 	string Wormhole_name;
 	int wormhole_active;
 	pair<int, int> wormholeb;
 	pair<int, int> wormholec;
 	pair<int, int> wormholed;
+	int Iworm;
 };
+
+int WormHole::wormholeIndex = 0;
+WormHole* WormholePointers[2];
+
+void WormHole::set_pointer()
+{
+	WormholePointers[Iworm] = this;
+};
+
+class Spaceship : public MapTile
+{
+public:
+
+	static int shipcount;
+
+	Spaceship(int Placex, int Placey) : MapTile(Placex, Placey)
+	{
+		shipcount++;
+		shipkey = shipcount;
+		int a = Rng();
+		if (a < 80)
+		{
+			int carrier = 0;
+			int cruiser = 0;
+			int destroyer = 0;
+			int corvete = 0;
+			int picket = 0;
+			int merchant = 1;
+			int mining = 0;
+			string faction = "";
+			
+		}
+		else if (a < 85)
+		{
+			int carrier = 0;
+			int cruiser = 0;
+			int destroyer = 0;
+			int corvete = 0;
+			int picket = 1;
+			int merchant = 10;
+			int mining = 1;
+		}
+		else if (a < 90)
+		{
+			int carrier = 0;
+			int cruiser = 0;
+			int destroyer = 1;
+			int corvete = 2;
+			int picket = 4;
+			int merchant = 10;
+			int mining = 0;
+		}
+		else if (a < 95)
+		{
+			int carrier = 1;
+			int cruiser = 2;
+			int destroyer = 10;
+			int corvete = 0;
+			int picket = 5;
+			int merchant = 0;
+			int mining = 0;
+		}
+		else if (a < 100)
+		{
+			int carrier = 1;
+			int cruiser = 10;
+			int destroyer = 40;
+			int corvete = 0;
+			int picket = 10;
+			int merchant = 0;
+			int mining = 0;
+		}
+	};
+	~Spaceship()
+	{
+		
+	};
+
+	int select_ship_event()
+	{
+		return shipkey;
+	}
+	void Displayship()
+	{
+		cout << shipname << endl;
+		cout << faction << endl;
+		cout << signal << endl;
+		seexandy();
+	};
+	void set_name(string fleet, string tempfaction)
+	{
+		shipname = fleet;
+		faction = tempfaction;
+	}
+	void set_fleet(int CV, int CL, int DD, int KE, int PK)
+	{
+		carrier = CV;
+		cruiser = CL;
+		destroyer = DD;
+		corvete = KE;
+		picket = PK;
+	};
+
+private:
+	string shipname;
+	string faction;
+	int signal;
+	int shipkey;
+	int picket;
+	int corvete;
+	int destroyer;
+	int cruiser;
+	int carrier;
+	int merchant;
+	int mining;
+	int drive_status;
+};
+
+int Spaceship::shipcount = 0;
 
 //1000 (placeholder,
 Spaceship* shipPointers[1000];
@@ -195,46 +371,8 @@ void createShip(int x, int y)
 
 void DeleteShip(int shipkey)
 {
-	delete shipPointers[Spaceship::shipcount];
+	delete shipPointers[shipkey];
 };
-
-class Spaceship : public MapTile
-{
-public:
-
-	static int shipcount;
-
-	Spaceship(int Placex, int Placey) : MapTile(Placex, Placey)
-	{
-		shipcount++;
-		shipkey = shipcount;
-	};
-	~Spaceship()
-	{
-		delete shipPointers[shipcount];
-	};
-
-	int select_ship_event()
-	{
-		return shipkey;
-	}
-	void Displayship()
-	{
-		cout << shipname << endl;
-		cout << faction << endl;
-		cout << signal << endl;
-		seexandy();
-	};
-
-private:
-	string shipname;
-	string faction;
-	int signal;
-	int shipkey;
-};
-
-int Spaceship::shipcount = 0;
-
 
 /*
 okok I need to work on this latter, but I need to make a list of pointers that are created in the ship contructor. this will be used to point to ships in the sectors... ok. 
@@ -326,12 +464,12 @@ class GameEvents
 
 {
 public:
-	static void eventNow(pair<int, int> a, pair<int, int> b)
+	static void eventNow(pair<int, int> a, pair<int, int> b,string d)
 	{
 		//random_event();
-		//cout << random_event << endl;
+		
 		int timelag = timescale(a, b);
-		cout << timelag << endl;
+		//cout << timelag << endl;
 		int laghourtick = 0;
 		int lagminutetick = 0;
 
@@ -346,9 +484,9 @@ public:
 			lagminutetick = timelag / 60;
 			timelag = timelag - (lagminutetick * 60);
 		}
-		cout << laghourtick << endl;
-		cout << lagminutetick << endl;
-		cout << timelag << endl;
+		//cout << laghourtick << endl;
+		//cout << lagminutetick << endl;
+		//cout << timelag << endl;
 		bool eventhappend = false;
 		while (!eventhappend)
 		{if ( laghourtick =! 0 && laghourtick == hourtick)
@@ -357,7 +495,7 @@ public:
 				{
 					if (timelag == ticknumber)
 					{
-					cout << "event happend" << endl;
+					cout << d << endl;
 					break;
 					}
 				}
@@ -366,13 +504,13 @@ public:
 			{
 				if (timelag == ticknumber)
 				{
-				cout << "event happend" << endl;
+				cout << d << endl;
 				break;
 				}
 			}
 			if (timelag == ticknumber)
 			{
-			cout << "event happend" << endl;
+			cout << d << endl;
 			break;
 			}
 		}
@@ -391,13 +529,37 @@ public:
 		return hourtick;
 	};
 
+	static pair <int, int> event_target()
+	{
+		
+		for (int i = 0; shipPointers; i++)
+		{
+			int a = Rng();
+			if (a > 99)
+				return shipPointers[i]->buildxandy();
+		}
+
+		
+
+	}
 	static int random_event()
 	{
-		//OH GOD;
-	
+		//OH GOD this goin to take some time to implement;
+		int a = Rng();
+		if (a < 1)
+		{
+			return 1;
+		}
+		else if (a < 80)
+		{
+			return 2;
+		}
+		else
+			return 3;
 	};
+	/*
 
-	/*static pair<int, int> move_event()
+	static pair<int, int> move_event()
 	{
 
 	};
@@ -418,19 +580,40 @@ public:
 	*/
 };
 
-pair <int, int> shipselected(a)
+pair <int, int> shipselected(int shipkey)
 {
-
+	Spaceship* a = shipPointers[shipkey];
+	a->seexandy();
+	return a->buildxandy() ;
+	
 }
 
 void Run_Event()
 {
 	while (statusofgame == true)
 	{
-		pair<int, int> a = ;
-		GameEvents::random_event();
-		pair <int, int> b = make_pair(0, 600);
-		GameEvents::eventNow(a, b);
+		string c;
+		pair<int, int> a;
+		int theevent = GameEvents::random_event();
+		if (theevent == 1)
+		{
+			a = GameEvents::event_target();
+			c = "ship has done something";
+		}
+		else if (theevent == 2)
+		{
+			a = WormholePointers[0]->buildxandy();
+			createShip(a.first, a.second);
+			c = "a ship was spoted leaving wormhole Alpha";
+		}
+		else
+		{
+			a = WormholePointers[1]->buildxandy();
+			createShip(a.first, a.second);
+			c = "a ship was spoted leaving wormehole Bravo";
+		}
+		pair <int, int> b = make_pair(0, 6000);
+		GameEvents::eventNow(a, b, c);
 	}
 }
 
@@ -448,11 +631,13 @@ void Run_Event()
 	WormHole Alpha(9000,12000,"Alpha");
 	Alpha.seexandy();
 	Alpha.seeWormhole();
+	Alpha.set_pointer();
 	WormHole Bravo(7000, 58000, "Bravo");
 	Bravo.seeWormhole();
+	Bravo.set_pointer();
 	statusofgame = true; 
 	std::thread TimeThread(gametime);
-	//std::thread Events(Run_Event);
+	std::thread Events(Run_Event);
 	
 	cout << "game is running in time" << endl;
 	while (statusofgame == true)
