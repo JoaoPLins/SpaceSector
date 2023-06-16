@@ -7,8 +7,16 @@
 #include <cmath>;
 #include <atomic>;
 #include <chrono>;
+#include <queue>;
+#include <mutex>;
+#include <sstream>;
+
+
 
 using namespace std;
+std::mutex queueMutex;
+std::queue<std::string> messageQueue;
+std::condition_variable queueCondition;
 
 //ok setting the objectives here 
 /* 
@@ -25,7 +33,7 @@ classes:
 -mapTile  
 -Planet
 
-Functuions:
+Functions:
 -Rng  
 create ship
 gametime
@@ -64,6 +72,28 @@ int Rng()
 	return dist(rng);
 };
 
+// oh GOD, ok, messages now need to be transported between messages... how to implement this? here we go..
+//note, now all messages will need to go trough the message command, and the main I'll be made as a message reader. 
+
+
+void messages(string a)
+{
+	std::lock_guard<std::mutex> lock(queueMutex);
+	messageQueue.push(a);
+	queueCondition.notify_one();
+};
+string captureString(void x())
+{
+	std::ostringstream oss;
+	std::streambuf* coutBuffer = std::cout.rdbuf();
+	x();
+	std::cout.rdbuf(coutBuffer);
+	std::string output = oss.str();
+	//messageQueue.pop();
+	return output;
+};
+
+
 class MapTile
 {
 public:
@@ -87,7 +117,7 @@ public:
 	}
 	void seexandy()
 	{
-		cout << " X: " << buildxandy().first << "|Y: " << buildxandy().second << " |" << endl;
+		 cout << " X: " << buildxandy().first << "|Y: " << buildxandy().second << " |" << endl;
 	}
 
 private:
@@ -258,57 +288,29 @@ public:
 		shipcount++;
 		shipkey = shipcount;
 		int a = Rng();
+		set_fleet(0, 0, 0, 0, 0, 1, 0);
+		//set_fleet(int CV, int CL, int DD, int KE, int PK, int AMC, int MN)
 		if (a < 80)
 		{
-			int carrier = 0;
-			int cruiser = 0;
-			int destroyer = 0;
-			int corvete = 0;
-			int picket = 0;
-			int merchant = 1;
-			int mining = 0;
-			string faction = "";
-			
+			set_fleet(0, 0, 0, 0, 0, 1, 0);
+				
 		}
 		else if (a < 85)
 		{
-			int carrier = 0;
-			int cruiser = 0;
-			int destroyer = 0;
-			int corvete = 0;
-			int picket = 1;
-			int merchant = 10;
-			int mining = 1;
+			set_fleet(0, 0, 0, 0, 1, 10, 1);
+			
 		}
 		else if (a < 90)
 		{
-			int carrier = 0;
-			int cruiser = 0;
-			int destroyer = 1;
-			int corvete = 2;
-			int picket = 4;
-			int merchant = 10;
-			int mining = 0;
+			set_fleet(0, 0, 1, 2, 4, 10, 0);
 		}
 		else if (a < 95)
 		{
-			int carrier = 1;
-			int cruiser = 2;
-			int destroyer = 10;
-			int corvete = 0;
-			int picket = 5;
-			int merchant = 0;
-			int mining = 0;
+			set_fleet(1, 2, 10, 0, 5, 0, 0);
 		}
 		else if (a < 100)
 		{
-			int carrier = 1;
-			int cruiser = 10;
-			int destroyer = 40;
-			int corvete = 0;
-			int picket = 10;
-			int merchant = 0;
-			int mining = 0;
+			set_fleet(1, 10, 40, 0, 10, 0, 0);
 		}
 	};
 	~Spaceship()
@@ -332,14 +334,25 @@ public:
 		shipname = fleet;
 		faction = tempfaction;
 	}
-	void set_fleet(int CV, int CL, int DD, int KE, int PK)
+	void set_fleet(int CV, int CL, int DD, int KE, int PK, int AMC, int MN)
 	{
 		carrier = CV;
 		cruiser = CL;
 		destroyer = DD;
 		corvete = KE;
 		picket = PK;
+		merchant = AMC;
+		mining = MN;
 	};
+	void set_target(int k, int t)
+	{
+		move_target = make_pair(k, t);
+	};
+
+	pair<int, int> ret_target()
+	{
+		return move_target;
+	}
 
 private:
 	string shipname;
@@ -354,6 +367,7 @@ private:
 	int merchant;
 	int mining;
 	int drive_status;
+	pair<int, int> move_target;
 };
 
 int Spaceship::shipcount = 0;
@@ -496,6 +510,7 @@ public:
 					if (timelag == ticknumber)
 					{
 					cout << d << endl;
+					messages(d);
 					break;
 					}
 				}
@@ -505,12 +520,14 @@ public:
 				if (timelag == ticknumber)
 				{
 				cout << d << endl;
+				messages(d);
 				break;
 				}
 			}
 			if (timelag == ticknumber)
 			{
 			cout << d << endl;
+			messages(d);
 			break;
 			}
 		}
@@ -532,13 +549,13 @@ public:
 	static pair <int, int> event_target()
 	{
 		
-		for (int i = 0; shipPointers; i++)
+		for (int i = 0; Spaceship::shipcount; i++)
 		{
 			int a = Rng();
 			if (a > 99)
 				return shipPointers[i]->buildxandy();
 		}
-
+		
 		
 
 	}
@@ -597,7 +614,7 @@ void Run_Event()
 		int theevent = GameEvents::random_event();
 		if (theevent == 1)
 		{
-			a = GameEvents::event_target();
+			//a = GameEvents::event_target();
 			c = "ship has done something";
 		}
 		else if (theevent == 2)
@@ -617,7 +634,59 @@ void Run_Event()
 	}
 }
 
- int main()
+void WormHoleManneger()
+{
+	for(int i=0; WormHole::wormholeIndex;i++)
+	WormholePointers[i]->wormhole_change();
+}
+
+void movementMannager()
+{
+	// 1000 é temporario
+	for (int i = 0; 1000; i++);
+	{
+		int a = 0;
+		pair<int,int> b = shipPointers[a]->buildxandy();
+		pair<int, int> c = shipPointers[a]->ret_target();
+		
+		if (b.first > c.first && b.second > c.second)
+		{
+		shipPointers[a]->SetxandY(b.first + 1, b.second + 1);
+		}
+		if (b.first > c.first && b.second == c.second)
+		{
+			shipPointers[a]->SetxandY(b.first + 1, b.second + 0);
+		}
+		if (b.first == c.first && b.second > c.second)
+		{
+			shipPointers[a]->SetxandY(b.first + 0, b.second + 1);
+		}
+		if (b.first < c.first && b.second < c.second)
+		{
+			shipPointers[a]->SetxandY(b.first - 1, b.second - 1);
+		}
+		if (b.first < c.first && b.second == c.second)
+		{
+			shipPointers[a]->SetxandY(b.first - 1, b.second + 0);
+		}
+		if (b.first == c.first && b.second < c.second)
+		{
+			shipPointers[a]->SetxandY(b.first + 0, b.second - 1);
+		}
+		
+		a++;
+	}
+}
+
+void runMovimentMannager()
+{
+	while (statusofgame == true)
+	{
+		movementMannager();
+	};
+};
+
+int main()
 {
 	Planet HomePlanet(0, 6000, "Home Planet");
 	HomePlanet.seexandy();
@@ -635,16 +704,20 @@ void Run_Event()
 	WormHole Bravo(7000, 58000, "Bravo");
 	Bravo.seeWormhole();
 	Bravo.set_pointer();
+
 	statusofgame = true; 
 	std::thread TimeThread(gametime);
 	std::thread Events(Run_Event);
-	
+	std::thread Wormholes(WormHoleManneger);
+	std::thread movimentMannager(runMovimentMannager);
+
 	cout << "game is running in time" << endl;
 	while (statusofgame == true)
 	{
-		//cout << ticknumber << endl;
-		Alpha.wormhole_change();
-		Bravo.wormhole_change();
+		std::unique_lock<std::mutex> lock(queueMutex);
+		queueCondition.wait(lock, [] { return !messageQueue.empty(); });
+		cout << ticknumber << endl;
+
 	};
 	TimeThread.join();
 	
