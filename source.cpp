@@ -45,9 +45,9 @@ Classes:
 -Wormhole
 
 Functions: 
-
+-messages
 -runEvent
-
+-capturestring
 
 
 shipselected 
@@ -89,7 +89,7 @@ string captureString(void x())
 	x();
 	std::cout.rdbuf(coutBuffer);
 	std::string output = oss.str();
-	//messageQueue.pop();
+	messageQueue.pop();
 	return output;
 };
 
@@ -627,23 +627,25 @@ void Run_Event()
 		{
 			a = WormholePointers[1]->buildxandy();
 			createShip(a.first, a.second);
-			c = "a ship was spoted leaving wormehole Bravo";
+			c = "a ship was spoted leaving wormhole Bravo";
 		}
 		pair <int, int> b = make_pair(0, 6000);
 		GameEvents::eventNow(a, b, c);
 	}
 }
-
-void WormHoleManneger()
+//this is bugged, gotta work out what is happening here. 
+/*void WormHoleManneger()
 {
-	for(int i=0; WormHole::wormholeIndex;i++)
-	WormholePointers[i]->wormhole_change();
+	for (int i = 0; WormHole::wormholeIndex; i++)
+	{
+		WormholePointers[i]->wormhole_change();
+	}
 }
-
+*/
 void movementMannager()
 {
 	// 1000 é temporario
-	for (int i = 0; 1000; i++);
+	for (int i = 0;Spaceship::shipcount; i++);
 	{
 		int a = 0;
 		pair<int,int> b = shipPointers[a]->buildxandy();
@@ -682,7 +684,9 @@ void runMovimentMannager()
 {
 	while (statusofgame == true)
 	{
+		string a = "Moviment_mannager Running";
 		movementMannager();
+		messages(a);
 	};
 };
 
@@ -704,19 +708,20 @@ int main()
 	WormHole Bravo(7000, 58000, "Bravo");
 	Bravo.seeWormhole();
 	Bravo.set_pointer();
-
+	Spaceship HomeFleet(0,6000);
 	statusofgame = true; 
 	std::thread TimeThread(gametime);
 	std::thread Events(Run_Event);
-	std::thread Wormholes(WormHoleManneger);
+	//std::thread Wormholes(WormHoleManneger);
 	std::thread movimentMannager(runMovimentMannager);
 
 	cout << "game is running in time" << endl;
 	while (statusofgame == true)
 	{
+		//cout << "debug on" << endl;
 		std::unique_lock<std::mutex> lock(queueMutex);
 		queueCondition.wait(lock, [] { return !messageQueue.empty(); });
-		cout << ticknumber << endl;
+		//cout << ticknumber << endl;
 
 	};
 	TimeThread.join();
@@ -724,4 +729,3 @@ int main()
 	
 	
  }
-
