@@ -3,6 +3,7 @@
 #include <vector>;
 #include <utility>;
 #include <random>;
+#include <fstream>
 #include <thread>;
 #include <cmath>;
 #include <atomic>;
@@ -69,6 +70,7 @@ int Rng()
 	std::random_device rd;
 	std::mt19937 rng(rd());
 	std::uniform_int_distribution<int> dist(1, 100);
+	//log("random number made");
 	return dist(rng);
 };
 
@@ -81,6 +83,7 @@ void messages(string a)
 	std::lock_guard<std::mutex> lock(queueMutex);
 	messageQueue.push(a);
 	queueCondition.notify_one();
+	
 };
 string captureString(void x())
 {
@@ -93,7 +96,38 @@ string captureString(void x())
 	return output;
 };
 
+string use_string(int a)
+{
+	return std::to_string(a);
+};
 
+//string use_string_from_pair(pair <int,int> a)
+//{
+//	string b = std::to_string(a.first);
+//	b.append(" ", a.second);
+//	return b;
+//};
+//ok this kind of work "sometimes" great, lets make a workaround shall we?
+
+void log(string a)
+{
+	ofstream outputFile("log.txt", std::ios::app);
+	if (outputFile.is_open())
+	{
+		outputFile << a << endl;
+		outputFile.close();
+	}
+};
+
+void LogValue(string a, int b)
+{
+	ofstream outputFile("log.txt", std::ios::app);
+	if (outputFile.is_open())
+	{
+		outputFile << a <<" | " << b << endl;
+		outputFile.close();
+	}
+}
 class MapTile
 {
 public:
@@ -251,7 +285,7 @@ public:
 		if (minutetick == 45)
 		{
 			wormhole_active++;
-			if (wormhole_active > 5)
+			if (wormhole_active == 5)
 			{
 				wormhole_active = 1;
 			}
@@ -281,13 +315,14 @@ class Spaceship : public MapTile
 {
 public:
 
-	static int shipcount;
+	static atomic<int> shipcount;
 
 	Spaceship(int Placex, int Placey) : MapTile(Placex, Placey)
 	{
-		shipcount++;
 		shipkey = shipcount;
+		LogValue("SPACESHIP_CONTRUCTOR-> shipKey",shipkey);
 		int a = Rng();
+		LogValue("SPACESHIP_CONTRUCTOR-> RNG",a);
 		set_fleet(0, 0, 0, 0, 0, 1, 0);
 		//set_fleet(int CV, int CL, int DD, int KE, int PK, int AMC, int MN)
 		if (a < 80)
@@ -312,12 +347,24 @@ public:
 		{
 			set_fleet(1, 10, 40, 0, 10, 0, 0);
 		}
+		//set_position();(redundant)
+		log("SPACESHIP_CONTRUCTOR-> the fleet composition was set.");
+		LogValue("SPACESHIP_CONTRUCTOR-> Picket		->", picket);
+		LogValue("SPACESHIP_CONTRUCTOR-> corvete	->", corvete);
+		LogValue("SPACESHIP_CONTRUCTOR-> destroyer	->", destroyer);
+		LogValue("SPACESHIP_CONTRUCTOR-> cruiser	->", cruiser);
+		LogValue("SPACESHIP_CONTRUCTOR-> carrier	->", carrier);
+		LogValue("SPACESHIP_CONTRUCTOR-> merchant	->", merchant);
+		LogValue("SPACESHIP_CONTRUCTOR-> mining		->", mining);
 	};
 	~Spaceship()
 	{
 		
 	};
-
+	void updateShipCount()
+	{
+		shipcount++;
+	}
 	int select_ship_event()
 	{
 		return shipkey;
@@ -327,7 +374,10 @@ public:
 		cout << shipname << endl;
 		cout << faction << endl;
 		cout << signal << endl;
+		see_target();
 		seexandy();
+		cout << shipkey << endl;
+		
 	};
 	void set_name(string fleet, string tempfaction)
 	{
@@ -346,6 +396,11 @@ public:
 	};
 	void set_target(int k, int t)
 	{
+
+		LogValue("SET_TARGET() -> Shipselected:", shipkey);
+		LogValue("SET_TARGET() -> INT X: ", k);
+		LogValue("SET_TARGET() -> int X: ", t);
+
 		move_target = make_pair(k, t);
 	};
 
@@ -353,7 +408,26 @@ public:
 	{
 		return move_target;
 	}
+	void see_target()
+	{
+		cout << move_target.first << move_target.second << endl;
+	}
+	//void set_position()
+	//{
+	//	position = buildxandy();
+	//}
 
+	pair<int, int> ret_position()
+	{
+		int importx = buildxandy().first;
+		LogValue("RET_POSITION() -> int X: ", importx);
+		int importy = buildxandy().second;
+		LogValue("RET_POSITION() -> int Y: ", importy);
+		pair<int, int> b = make_pair(importx, importy);
+		return b;
+	}
+	void setPointerManualy();
+	
 private:
 	string shipname;
 	string faction;
@@ -368,9 +442,10 @@ private:
 	int mining;
 	int drive_status;
 	pair<int, int> move_target;
+	pair<int, int> position;
 };
 
-int Spaceship::shipcount = 0;
+atomic<int> Spaceship::shipcount = 0;
 
 //1000 (placeholder,
 Spaceship* shipPointers[1000];
@@ -597,11 +672,23 @@ public:
 	*/
 };
 
-pair <int, int> shipselected(int shipkey)
+int shipselected(int locationA,int locationB)
 {
-	Spaceship* a = shipPointers[shipkey];
-	a->seexandy();
-	return a->buildxandy() ;
+	int locationX = locationA;
+	int locationY = locationB;
+	log("ship is about to be selected");
+	for (int i = 0; i > Spaceship::shipcount ; i++)
+	{
+		int PosX = shipPointers[i]->ret_position().first;
+		int PosY = shipPointers[i]->ret_position().second;
+		if (PosX == locationX && locationY == PosY)
+		{
+			LogValue("shipselected() -> int X: ",i );
+			log("was selected");
+			return i;
+		}
+	
+	}
 	
 }
 
@@ -610,8 +697,10 @@ void Run_Event()
 	while (statusofgame == true)
 	{
 		string c;
+		log("RUN_EVENT()->starting event");
 		pair<int, int> a;
 		int theevent = GameEvents::random_event();
+		LogValue("the event selected was", theevent);
 		if (theevent == 1)
 		{
 			//a = GameEvents::event_target();
@@ -620,14 +709,27 @@ void Run_Event()
 		else if (theevent == 2)
 		{
 			a = WormholePointers[0]->buildxandy();
+			LogValue("RUN_EVENT() -> wormhole used x:", a.first);
+			LogValue("RUN_EVENT() -> wormhole used y:", a.second);
 			createShip(a.first, a.second);
+			int shipindex = shipselected(a.first,a.second);
+			LogValue("RUN_EVENT() -> shipindex", shipindex);
+			shipPointers[shipindex]->set_target(WormholePointers[1]->buildxandy().first, WormholePointers[1]->buildxandy().second);
 			c = "a ship was spoted leaving wormhole Alpha";
+			shipPointers[shipindex]->updateShipCount();
 		}
 		else
 		{
+
 			a = WormholePointers[1]->buildxandy();
+			LogValue("RUN_EVENT() -> wormhole used x:", a.first);
+			LogValue("RUN_EVENT() -> wormhole used y:", a.second);
 			createShip(a.first, a.second);
+			int shipindex = shipselected(a.first,a.second);
+			LogValue("RUN_EVENT() -> shipindex", shipindex);
+			shipPointers[shipindex]->set_target(WormholePointers[0]->buildxandy().first, WormholePointers[1]->buildxandy().second);
 			c = "a ship was spoted leaving wormhole Bravo";
+			shipPointers[shipindex]->updateShipCount();
 		}
 		pair <int, int> b = make_pair(0, 6000);
 		GameEvents::eventNow(a, b, c);
@@ -644,12 +746,35 @@ void Run_Event()
 */
 void movementMannager()
 {
+	int a = 0;
+	LogValue("Moviment mannager() -> A VALUE", a);
+	log("Ship count is on:");
+	LogValue("Moviment mannager() ->Ship count is on : ", Spaceship::shipcount);
+
+	//int shipcountrealforlog = Spaceship::shipcount - 1;
+	//log(use_string(shipcountrealforlog));
+	int ships = Spaceship::shipcount ;
 	// 1000 é temporario
-	for (int i = 0;Spaceship::shipcount; i++);
+	//for (int i = 0; i <= ships; i++)
+	while (ships > a)
 	{
-		int a = 0;
-		pair<int,int> b = shipPointers[a]->buildxandy();
-		pair<int, int> c = shipPointers[a]->ret_target();
+		//log("I value:");
+		//log(use_string(i));
+		LogValue("Moviment mannager() -> A VALUE SET TO 0", a);
+		log("setting pair value");
+		//what a fucking dumb way to go about this
+		int importx = shipPointers[a]->ret_position().first;
+		LogValue("Moviment mannager() -> X", importx);
+		int importy = shipPointers[a]->ret_position().second;
+		LogValue("Moviment mannager() -> Y", importy);
+		pair<int, int> b = make_pair(importx, importy);
+		log("pair value for ship is set.");
+		importx = shipPointers[a]->ret_target().first;
+		LogValue("Moviment mannager() -> X", importx);
+		importy = shipPointers[a]->ret_target().second;
+		LogValue("Moviment mannager() -> Y", importy);
+		pair<int, int> c = make_pair(importx, importy);
+		log("pair value for ship target is set.");
 		
 		if (b.first > c.first && b.second > c.second)
 		{
@@ -675,8 +800,10 @@ void movementMannager()
 		{
 			shipPointers[a]->SetxandY(b.first + 0, b.second - 1);
 		}
-		
+		log("ship probably moved.");
 		a++;
+		log("A adedd one,");
+		LogValue("Moviment mannager() -> A VALUE", a);
 	}
 }
 
@@ -685,13 +812,17 @@ void runMovimentMannager()
 	while (statusofgame == true)
 	{
 		string a = "Moviment_mannager Running";
-		movementMannager();
+		log(a);
 		messages(a);
+		movementMannager();
+		
+		
 	};
 };
 
 int main()
 {
+	
 	Planet HomePlanet(0, 6000, "Home Planet");
 	HomePlanet.seexandy();
 	Planet testPlanet(299, 149, "planet1");
@@ -709,6 +840,12 @@ int main()
 	Bravo.seeWormhole();
 	Bravo.set_pointer();
 	Spaceship HomeFleet(0,6000);
+	HomeFleet.set_name("Home Fleet", "Civ");
+	HomeFleet.set_target(0, 6000);
+	//HomeFleet.Displayship();
+	HomeFleet.setPointerManualy();
+	//cout << GameEvents::event_target().second;
+	cout <<shipPointers[0] -> ret_position().second << endl;
 	statusofgame = true; 
 	std::thread TimeThread(gametime);
 	std::thread Events(Run_Event);
@@ -721,6 +858,7 @@ int main()
 		//cout << "debug on" << endl;
 		std::unique_lock<std::mutex> lock(queueMutex);
 		queueCondition.wait(lock, [] { return !messageQueue.empty(); });
+		messageQueue.pop();
 		//cout << ticknumber << endl;
 
 	};
@@ -729,3 +867,8 @@ int main()
 	
 	
  }
+
+void Spaceship::setPointerManualy()
+	{
+		shipPointers[Spaceship::shipkey] = this;
+	}
