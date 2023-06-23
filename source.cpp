@@ -33,11 +33,16 @@ DONE:
 classes: 
 -mapTile  
 -Planet
+-messages
 
 Functions:
 -Rng  
-create ship
-gametime
+-create ship
+-gametime
+-capturestring
+-Log function
+-shipselected
+-runEvent
 
 HALF-DONE: 
 Classes:
@@ -46,17 +51,17 @@ Classes:
 -Wormhole
 
 Functions: 
--messages
--runEvent
+
+
 -capturestring
+PlayerCommands.
 
 
-shipselected 
 
 TODO
 
 functions:
-PlayerCommands.
+
 
 */
 atomic<bool> statusofgame;
@@ -684,7 +689,7 @@ int shipselected(int locationA,int locationB)
 		if (PosX == locationX && locationY == PosY)
 		{
 			LogValue("shipselected() -> int X: ",i );
-			log("was selected");
+			log("shipselected() -> ship was selected");
 			return i;
 		}
 	
@@ -748,7 +753,7 @@ void movementMannager()
 {
 	int a = 0;
 	LogValue("Moviment mannager() -> A VALUE", a);
-	log("Ship count is on:");
+	log("Moviment mannager()->Ship count is on:");
 	LogValue("Moviment mannager() ->Ship count is on : ", Spaceship::shipcount);
 
 	//int shipcountrealforlog = Spaceship::shipcount - 1;
@@ -774,35 +779,41 @@ void movementMannager()
 		importy = shipPointers[a]->ret_target().second;
 		LogValue("Moviment mannager() -> Y", importy);
 		pair<int, int> c = make_pair(importx, importy);
-		log("pair value for ship target is set.");
+		log("Moviment mannager() ->pair value for ship target is set.");
 		
 		if (b.first > c.first && b.second > c.second)
 		{
-		shipPointers[a]->SetxandY(b.first + 1, b.second + 1);
+			shipPointers[a]->SetxandY(b.first + 1, b.second + 1);
+			LogValue("Moviment mannager() -> moved x+1 y+1 ->", a);
 		}
 		if (b.first > c.first && b.second == c.second)
 		{
 			shipPointers[a]->SetxandY(b.first + 1, b.second + 0);
+			LogValue("Moviment mannager() -> moved x+1 ship ->", a);
 		}
 		if (b.first == c.first && b.second > c.second)
 		{
 			shipPointers[a]->SetxandY(b.first + 0, b.second + 1);
+			LogValue("Moviment mannager() -> moved y+1 ship ->", a);
 		}
 		if (b.first < c.first && b.second < c.second)
 		{
 			shipPointers[a]->SetxandY(b.first - 1, b.second - 1);
+			LogValue("Moviment mannager() -> moved x-1 y-1 ship ->", a);
 		}
 		if (b.first < c.first && b.second == c.second)
 		{
 			shipPointers[a]->SetxandY(b.first - 1, b.second + 0);
+			LogValue("Moviment mannager() -> moved x-1  ship ->", a);
 		}
 		if (b.first == c.first && b.second < c.second)
 		{
 			shipPointers[a]->SetxandY(b.first + 0, b.second - 1);
+			LogValue("Moviment mannager() -> moved y-1 ship ->", a);
 		}
-		log("ship probably moved.");
+		log("Moviment mannager() ->ship probably moved.");
 		a++;
-		log("A adedd one,");
+		log("Moviment mannager() ->A adedd one,");
 		LogValue("Moviment mannager() -> A VALUE", a);
 	}
 }
@@ -819,6 +830,180 @@ void runMovimentMannager()
 		
 	};
 };
+
+
+//hello there, seeeting it up over here, this is spoilers... dont be spoiled. 
+int partition(int arr[], int low, int high)
+{
+	int pivot = arr[high];
+	int i = (low - 1);
+
+	for (int j = low; j <= high - 1; ++j) {
+		if (arr[j] < pivot) {
+			++i;
+			std::swap(arr[i], arr[j]);
+		}
+	}
+
+	std::swap(arr[i + 1], arr[high]);
+	return (i + 1);
+};
+
+
+void sortDist(int arr[], int low, int high)
+{
+	if (low < high) 
+	{
+		int pivotIndex = partition(arr, low, high);
+
+		sortDist(arr, low, pivotIndex - 1);
+		sortDist(arr, pivotIndex + 1, high);
+	}
+}
+
+
+
+
+
+void PlayerCommands()
+{
+	string a;
+	cin >> a;
+	int b;
+	b = 0;
+	if (a == "Help" || a == "help" || a == "h" || a == "H")
+	{
+		b = 0;
+	}
+	if (a == "Radar" || a == "radar" || a == "r" || a == "R")
+	{
+		b = 1;
+	}
+	if (a == "Move" || a == "move" || a == "m" || a == "M")
+	{
+		b = 2;
+	}
+	if (a == "RTB" || a == "rtb" || a == "b" || a == "B")
+	{
+		b = 3;
+	}
+	int contactNumber = Spaceship::shipcount - 1;
+	cout << "contact number is on " << contactNumber << endl;
+	pair <int, int> source = make_pair(0, 6000);
+	pair <int, int> Pares;
+	int shipx[1000];
+	int shipy[1000];
+	int DistanceFromSource[1000];
+	
+	
+
+	switch (b)
+	{
+	case 0:
+		cout << "Commands: " << endl;
+		cout << "H or Help command  -> it displays the player commands" << endl ;
+		cout << "R or Radar command -> it displays the Radar contacts. " << endl;
+		cout << "M or Move Command  -> moves the Home fleet" << endl;
+		cout << "B or RTB command   -> returns the fleet home" << endl;
+		break;
+	case 1:
+		//not implemented yet;
+		// 
+		// as expected bugs were found 
+		
+		cout << "Active radar ping starting..." << endl;
+		cout << "Pulse time: ";
+		cout << hourtick <<":"<< minutetick << ":" << ticknumber << endl;
+		// ok so I'll have to use event now a lot of times? how exactly I'll do this, I guess I'll first take all the targets and then sort them by distance, and then display thm 
+		// letsgo making those fun sorting algorithins my teachers love 
+		
+		// ok there we go, this should do it; 
+		
+		for (int i = 0; i <= contactNumber; i++)
+		{
+			shipx[i] = shipPointers[i]->ret_position().first;
+		}
+		for (int i = 0; i <= contactNumber; i++)
+		{
+			shipy[i] = shipPointers[i]->ret_position().second;
+		}
+		// numbers were asagin;
+		for (int i = 0; i <= contactNumber; i++)
+		{
+			cout << shipx[i] << " " << shipy[i] << " " << endl;
+		}
+
+
+		cout << "numbers were asagin" << endl;
+		
+		for (int i = 0; i <= contactNumber; i++)
+		{
+			Pares = make_pair(shipx[i], shipy[i]);
+			cout << "Pares were set" << Pares.first << Pares.second <<endl;
+			DistanceFromSource[i] = distance(Pares, source);
+		};
+		cout << "distance" << endl;
+		for (int i = 0; i <= contactNumber; i++)
+		{
+			cout << DistanceFromSource[i] << endl;
+		}
+		//cout << "now we delete the first ones " << endl;
+		// I dont need those two anymore. 
+		// wtf just stop leaking you bastard 
+		//moved downards 
+
+		// ok now lets work with what we got to sort things 
+		//using quicksort... it is upp there ^
+		cout << "sort the distance" << endl;
+		sortDist(DistanceFromSource, 0, contactNumber);
+		cout << DistanceFromSource << endl;
+		cout << "delete this shit" << endl;
+		
+
+		break;
+	case 2:
+		cout << "Please provide the integer orders values :" << endl;
+		cout << "The X value:" << endl;
+		int a;
+		int b;
+		char confirm;
+		cin >> a;
+		cout << "value added was : " << a << endl;
+		cout << "if you desire to change it press N" << endl;
+		cin >> confirm;
+		while (confirm == 110 || confirm == 78) {
+			cin >> a;
+			cout << "value added was : " << a << endl;
+			cout << "if you desire to change it press N" << endl;
+			cin >> confirm;
+		}
+		cout << "The Y value:" << endl;
+		cin >> b;
+		cout << "value added was : " << b << endl;
+		cout << "if you desire to change it press N" << endl;
+		cin >> confirm;
+		while (confirm == 110 || confirm == 78) {
+			cin >> b;
+			cout << "value added was : " << b << endl;
+			cout << "if you desire to change it press N" << endl;
+			cin >> confirm;
+		}
+		shipPointers[0]->set_target(a, b);
+
+		break;
+	case 3: 
+		cout << "home fleet will return to base";
+		shipPointers[0]->set_target(0, 6000);
+
+		break;
+	default:
+		cout << "Invalid option, use H to get the correct commands" << endl;
+
+		break;
+
+	}
+	
+}
 
 int main()
 {
@@ -855,6 +1040,7 @@ int main()
 	cout << "game is running in time" << endl;
 	while (statusofgame == true)
 	{
+		PlayerCommands();
 		//cout << "debug on" << endl;
 		std::unique_lock<std::mutex> lock(queueMutex);
 		queueCondition.wait(lock, [] { return !messageQueue.empty(); });
@@ -863,7 +1049,8 @@ int main()
 
 	};
 	TimeThread.join();
-	
+	Events.join();
+	movimentMannager.join();
 	
 	
  }
