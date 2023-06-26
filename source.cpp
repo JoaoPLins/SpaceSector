@@ -279,11 +279,33 @@ public:
 	};
 
 
-	/*void Wormholeevent()
+	pair <int,int> returnActiveWormhole()
 	{
 		
+		if (wormhole_active == 1)
+		{
+			pair <int, int> a = buildxandy();
+			return a;
+		}
+
+		if (wormhole_active == 2)
+		{
+			return wormholeb;
+		}
+		
+		if (wormhole_active == 3)
+		{
+			return wormholec;
+		}
+		
+		if (wormhole_active == 4)
+		{
+			return wormholed;
+		}
+		
+
 	};
-	*/
+	
 	
 	void wormhole_change()
 	{
@@ -361,6 +383,7 @@ public:
 		LogValue("SPACESHIP_CONTRUCTOR-> carrier	->", carrier);
 		LogValue("SPACESHIP_CONTRUCTOR-> merchant	->", merchant);
 		LogValue("SPACESHIP_CONTRUCTOR-> mining		->", mining);
+		spoted = false;
 	};
 	~Spaceship()
 	{
@@ -382,6 +405,7 @@ public:
 		see_target();
 		seexandy();
 		cout << shipkey << endl;
+		cout << spoted << endl;
 		
 	};
 	void set_name(string fleet, string tempfaction)
@@ -417,10 +441,17 @@ public:
 	{
 		cout << move_target.first << move_target.second << endl;
 	}
-	//void set_position()
-	//{
-	//	position = buildxandy();
-	//}
+	
+	void shipWasSpoted()
+	{
+		spoted = true;
+		cout << "ship spoted setted to true" << endl;
+	}
+	bool shipisSpoted()
+	{
+		
+		return spoted;
+	}
 
 	pair<int, int> ret_position()
 	{
@@ -448,6 +479,7 @@ private:
 	int drive_status;
 	pair<int, int> move_target;
 	pair<int, int> position;
+	bool spoted;
 };
 
 atomic<int> Spaceship::shipcount = 0;
@@ -643,11 +675,11 @@ public:
 	{
 		//OH GOD this goin to take some time to implement;
 		int a = Rng();
-		if (a < 1)
+		if (a < 97)
 		{
 			return 1;
 		}
-		else if (a < 80)
+		else if (a < 98)
 		{
 			return 2;
 		}
@@ -709,15 +741,15 @@ void Run_Event()
 		if (theevent == 1)
 		{
 			//a = GameEvents::event_target();
-			c = "ship has done something";
+			c = "nothing happens";
 		}
 		else if (theevent == 2)
 		{
-			a = WormholePointers[0]->buildxandy();
+			a = WormholePointers[0]->returnActiveWormhole();
 			LogValue("RUN_EVENT() -> wormhole used x:", a.first);
 			LogValue("RUN_EVENT() -> wormhole used y:", a.second);
 			createShip(a.first, a.second);
-			int shipindex = shipselected(a.first,a.second);
+			int shipindex = shipselected(a.first, a.second);
 			LogValue("RUN_EVENT() -> shipindex", shipindex);
 			shipPointers[shipindex]->set_target(WormholePointers[1]->buildxandy().first, WormholePointers[1]->buildxandy().second);
 			c = "a ship was spoted leaving wormhole Alpha";
@@ -726,11 +758,11 @@ void Run_Event()
 		else
 		{
 
-			a = WormholePointers[1]->buildxandy();
+			a = WormholePointers[1]->returnActiveWormhole();
 			LogValue("RUN_EVENT() -> wormhole used x:", a.first);
 			LogValue("RUN_EVENT() -> wormhole used y:", a.second);
 			createShip(a.first, a.second);
-			int shipindex = shipselected(a.first,a.second);
+			int shipindex = shipselected(a.first, a.second);
 			LogValue("RUN_EVENT() -> shipindex", shipindex);
 			shipPointers[shipindex]->set_target(WormholePointers[0]->buildxandy().first, WormholePointers[1]->buildxandy().second);
 			c = "a ship was spoted leaving wormhole Bravo";
@@ -738,6 +770,11 @@ void Run_Event()
 		}
 		pair <int, int> b = make_pair(0, 6000);
 		GameEvents::eventNow(a, b, c);
+		int i = Spaceship::shipcount;
+		if (theevent > 1)
+		{
+			shipPointers[i - 1]->shipWasSpoted();
+		}
 	}
 }
 //this is bugged, gotta work out what is happening here. 
@@ -887,6 +924,10 @@ void PlayerCommands()
 	{
 		b = 3;
 	}
+	if (a == "Wormhole" || a == "wormhole" || a == "w" || a == "W")
+	{
+		b = 4;
+	}
 	int contactNumber = Spaceship::shipcount - 1;
 	cout << "contact number is on " << contactNumber << endl;
 	pair <int, int> source = make_pair(0, 6000);
@@ -894,7 +935,9 @@ void PlayerCommands()
 	int shipx[1000];
 	int shipy[1000];
 	int DistanceFromSource[1000];
-	
+	int TimeShips[1000];
+	int ticks;
+	int shipsspoted = 0;
 	
 
 	switch (b)
@@ -940,10 +983,16 @@ void PlayerCommands()
 		{
 			Pares = make_pair(shipx[i], shipy[i]);
 			cout << "Pares were set" << Pares.first << Pares.second <<endl;
-			DistanceFromSource[i] = distance(Pares, source);
+			cout << shipPointers[i]->shipisSpoted() << endl;
+			if (shipPointers[i]->shipisSpoted() == true)
+			{
+				cout << "shipfound" << i << endl;
+				DistanceFromSource[i] = distance(Pares, source);
+				shipsspoted++;
+			}
 		};
 		cout << "distance" << endl;
-		for (int i = 0; i <= contactNumber; i++)
+		for (int i = 0; i <= shipsspoted; i++)
 		{
 			cout << DistanceFromSource[i] << endl;
 		}
@@ -955,11 +1004,27 @@ void PlayerCommands()
 		// ok now lets work with what we got to sort things 
 		//using quicksort... it is upp there ^
 		cout << "sort the distance" << endl;
-		sortDist(DistanceFromSource, 0, contactNumber);
-		cout << DistanceFromSource << endl;
-		cout << "delete this shit" << endl;
-		
-
+		sortDist(DistanceFromSource, 0, shipsspoted);
+		for (int i = 0; i <= shipsspoted; i++)
+		{
+			cout << DistanceFromSource[i] << endl;
+			TimeShips[i] = DistanceFromSource[i]/100;
+		}
+		//cout << "delete this shit" << endl;
+		ticks = 0;
+		//I'm inplementing this still 
+		/*
+		while (TimeShips[shipsspoted] > ticks)
+		{
+			for (int i = 0; i <= shipsspoted; i++)
+			{
+				if (TimeShips[i] == ticks)
+				{
+					
+				}
+			}
+		}
+		*/
 		break;
 	case 2:
 		cout << "Please provide the integer orders values :" << endl;
@@ -969,23 +1034,23 @@ void PlayerCommands()
 		char confirm;
 		cin >> a;
 		cout << "value added was : " << a << endl;
-		cout << "if you desire to change it press N" << endl;
+		cout << "if you desire to change it press N and Enter to confirm" << endl;
 		cin >> confirm;
 		while (confirm == 110 || confirm == 78) {
 			cin >> a;
 			cout << "value added was : " << a << endl;
-			cout << "if you desire to change it press N" << endl;
+			cout << "if you desire to change it press N and Enter to confirm" << endl;
 			cin >> confirm;
 		}
 		cout << "The Y value:" << endl;
 		cin >> b;
 		cout << "value added was : " << b << endl;
-		cout << "if you desire to change it press N" << endl;
+		cout << "if you desire to change it press N and Enter to confirm" << endl;
 		cin >> confirm;
 		while (confirm == 110 || confirm == 78) {
 			cin >> b;
 			cout << "value added was : " << b << endl;
-			cout << "if you desire to change it press N" << endl;
+			cout << "if you desire to change it press N and Enter to confirm" << endl;
 			cin >> confirm;
 		}
 		shipPointers[0]->set_target(a, b);
@@ -1001,6 +1066,10 @@ void PlayerCommands()
 
 		break;
 
+	case 4:
+		WormholePointers[0]->seeWormhole();
+		WormholePointers[1]->seeWormhole();
+		break;
 	}
 	
 }
@@ -1029,8 +1098,11 @@ int main()
 	HomeFleet.set_target(0, 6000);
 	//HomeFleet.Displayship();
 	HomeFleet.setPointerManualy();
+	HomeFleet.updateShipCount();
+	HomeFleet.shipWasSpoted();
+	HomeFleet.Displayship();
 	//cout << GameEvents::event_target().second;
-	cout <<shipPointers[0] -> ret_position().second << endl;
+	cout << shipPointers[0] -> ret_position().second << endl;
 	statusofgame = true; 
 	std::thread TimeThread(gametime);
 	std::thread Events(Run_Event);
